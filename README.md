@@ -15,4 +15,4 @@ basically you need to take some files from vs 2022 and put them in the following
 
 this is messy but it works and unlike mingw actually seems to understand what not linking unnesscary code is, so /shrug
 
-then run ./makedll.sh. I promise I'll put in a makefile or something much better once this turns into something useful...
+then run `make`

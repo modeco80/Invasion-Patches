@@ -7,6 +7,8 @@ static int __dllmain_attached = 0;
 
 // minimal crt0 for dll using msvcrt.lib
 // probably not that needed but whatever
+// FIXME: needs changes to do static ctors
+
 extern "C" {
 	// msvcrt internal api
 	void _cexit();
@@ -29,9 +31,7 @@ extern "C" {
 
 
 	int WINAPI _DllMainCRTStartup(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
-		// don't care didn't ask + ratio
-		
-		if(!DllMain(hinstDLL, dwReason, lpvReserved)) {
+		if(DllMain(hinstDLL, dwReason, lpvReserved) == FALSE) {
 			// Fake a detach and early fail.
 			if(dwReason == DLL_PROCESS_ATTACH) {
 				static_cast<void>(_DllMain_Detach(hinstDLL, lpvReserved));
