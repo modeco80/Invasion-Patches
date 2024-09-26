@@ -1,5 +1,9 @@
+// clang-format off
+// (it will try to reorder these headers in a way which doesn't work)
 #define _WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commctrl.h>
+// clang-format on
 
 #include "patcher.hpp"
 #include "resource.h"
@@ -159,6 +163,10 @@ void Launch() {
 
 extern "C" int lily_main(HINSTANCE hInstance) {
 	gHInstance = hInstance;
+
+	// Init comctl32
+	INITCOMMONCONTROLSEX ctrls { .dwSize = sizeof(ctrls), .dwICC = ICC_WIN95_CLASSES };
+	InitCommonControlsEx(&ctrls);
 
 	// show my beautiful handiwork
 	hWnd = CreateDialog(hInstance, MAKEINTRESOURCE(IDI_MAIN), nullptr, MainDlgProc);

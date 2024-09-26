@@ -5,6 +5,9 @@
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 
+// Manifest
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "invlaunch.manifest"
+
 // Launcher bitmap
 IDB_LAUNCHER BITMAP "launcherbitmap.bmp"
 
