@@ -1,29 +1,26 @@
 # Makefile
 
-CXX := clang++ --target=i686-pc-msvc-windows
-LD := lld-link
-SDK_INCLUDES := -isystem ~/vs2022/ucrt/include -isystem ~/vs2022/winsdk/include/shared -isystem ~/vs2022/winsdk/include/um
-
-CXXFLAGS := $(SDK_INCLUDES) -std=c++23 -O2
+include ../common/rules.mk
 
 # libs 2 link
 LINK_LIBS := ~/vs2022/winsdk/lib/kernel32.lib \
 	../common/lib/msvcrt.lib
 
+VPATH := src/ ../common/src
+
+OUT := GVRInputRaw.dll
+
 # objs
-OBJS := dllcrt0.o \
+OBJS := dllcrt0.o ctors.o exit.o \
 	gvrinput.o
 
 .PHONY: all clean
 
-all: GVRInputRaw.dll
+all: $(OUT)
 
 clean:
-	rm $(OBJS) GVRInputRaw.dll
+	rm $(OBJS) $(OUT)
 
-%.o: src/%.cpp
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-
-GVRInputRaw.dll: $(OBJS)
-	lld-link /dll /nodefaultlib /subsystem:windows,5.1 /out:$@ $(LINK_LIBS) $(OBJS)
+$(OUT): $(OBJS)
+	$(call LINK_DLL)
 	rm GVRInputRaw.lib

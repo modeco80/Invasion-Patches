@@ -6,7 +6,7 @@ namespace util {
 
 	// use va-list version @ some point. for now this works
 	template<class ...Args>
-	void OutputDebugF(char* const pszFormat, Args&&... args) {
+	void OutputDebugF(const char* pszFormat, Args&&... args) {
 		char buf[512]{};
 		
 		int res = _snprintf(&buf[0], sizeof(buf)-1, pszFormat, args...);

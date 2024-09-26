@@ -7,11 +7,19 @@ static int __dllmain_attached = 0;
 
 // minimal crt0 for dll using msvcrt.lib
 // probably not that needed but whatever
-// FIXME: needs changes to do static ctors
+
+enum class LilyCrtInitState {
+	Uninit,
+	Init,
+};
+
+constinit static LilyCrtInitState crtInitState = LilyCrtInitState::Uninit;
 
 extern "C" {
-	// msvcrt internal api
-	void _cexit();
+
+	// see ./ctors.cpp
+	void __lilycrt_call_init();
+	void __lilycrt_call_fini();
 
 	DWORD DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpReserved);
 
@@ -23,7 +31,14 @@ extern "C" {
 	static BOOL _DllMain_Detach(HANDLE hInstDLL, LPVOID reserved) {
 		if(__dllmain_attached > 0) {
 			__dllmain_attached--;
-			_cexit();
+
+			// Call global destructors
+			if(__dllmain_attached == 0) {
+				if(crtInitState == LilyCrtInitState::Init) {
+					__lilycrt_call_fini();
+					crtInitState = LilyCrtInitState::Uninit;
+				}
+			}
 		}
 
 		return TRUE;
@@ -31,6 +46,15 @@ extern "C" {
 
 
 	int WINAPI _DllMainCRTStartup(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
+		// Run global ctors once.
+		if(dwReason == DLL_PROCESS_ATTACH || DLL_THREAD_ATTACH) {
+			if(crtInitState == LilyCrtInitState::Uninit) {
+				__lilycrt_call_init();
+				crtInitState = LilyCrtInitState::Init;
+			}
+		}
+		
+
 		if(DllMain(hinstDLL, dwReason, lpvReserved) == FALSE) {
 			// Fake a detach and early fail.
 			if(dwReason == DLL_PROCESS_ATTACH) {

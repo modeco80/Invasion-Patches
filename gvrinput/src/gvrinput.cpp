@@ -7,10 +7,24 @@
 
 #include "util.hpp"
 
-// this matches layout of the official GVRInputRaw.dll
-// but we can store anything after +0x14
-struct gvrInputStructure {
-	char pad[0x14];
+enum GVRRawInputErrorCode {
+	GVR_EC_NONE = 0,
+	GVR_EC_NOT_INITIALIZED = 1,
+	GVR_EC_NO_DEVICE_FOUND = 2,
+	GVR_EC_BAD_DATA_POINTER = 3,
+	GVR_EC_UPDATE_ERROR = 4
+};
+
+// matches layout of the official GVRInputRaw.dll
+struct GVRInputRawData {
+	short axis_x;
+	short axis_y;
+	short delta_x;
+	short delta_y;
+  	short last_x;
+	short last_y;
+	unsigned long buttons_new;
+  	unsigned long buttons_old;
 
 	// 0x18 onwards
 	__int64 liTimeNow;
@@ -18,21 +32,23 @@ struct gvrInputStructure {
 	__int64 liPerfFrequency;
 };
 
-#define EXPORT __declspec(dllexport) __cdecl
+static_assert(sizeof(GVRInputRawData) == 0x30, "doesn't match");
+
+#define GVRINPUT_API __declspec(dllexport) __cdecl
 
 extern "C" {
-	int EXPORT GVRInputRawInit(HWND hWnd, gvrInputStructure* pInput, char* pszRegistryName) {
+	int GVRINPUT_API GVRInputRawInit(HWND hWnd, GVRInputRawData* pInput, char* pszRegistryName) {
 		util::OutputDebugF("GVRInputRawInit(hWnd: %p, pInput: %p, %s)", hWnd, pInput, pszRegistryName);
 
 		// fail epic style
 		if(!pInput)
-			return 1;
+			return GVR_EC_BAD_DATA_POINTER;
 
 		QueryPerformanceFrequency((PLARGE_INTEGER)&pInput->liPerfFrequency);
 		QueryPerformanceCounter((PLARGE_INTEGER)&pInput->liTimeNow);
 		pInput->liTimeLast = pInput->liTimeNow;
 
-		return 0;
+		return GVR_EC_NONE;
 	}
 
 	// possible return values GVRInputRaw itself provides:
@@ -41,30 +57,21 @@ extern "C" {
 	// 3 = ptr to input structure is null
 	// 4 = input update call failed internally
 
-	int EXPORT GVRInputRawUpdate(gvrInputStructure* pInput) {
+	GVRRawInputErrorCode GVRINPUT_API GVRInputRawUpdate(GVRInputRawData* pInput) {
 		if(!pInput)
-			return 3;
+			return GVR_EC_BAD_DATA_POINTER;
 
 		
 		QueryPerformanceCounter((PLARGE_INTEGER)&pInput->liTimeNow);
 
-		// in MS
-		int delta = (int((pInput->liTimeNow - pInput->liTimeLast) * pInput->liPerfFrequency) / 1000 / 1000);
-
-		if(delta > 1000) {
-			// for fun!
-			for(int i = 0; i < 0x14; ++i)
-				pInput->pad[i] += 1;
-			util::OutputDebugF("GVRInputRawUpdate(pInput: %p) delta %d", pInput, delta);
-		}
-
+		// FIXME: deltatime
 
 		pInput->liTimeLast = pInput->liTimeNow;
 
-		return 0;
+		return GVR_EC_NONE;
 	}
 
-	void EXPORT GVRInputRawCleanup() {
+	void GVRINPUT_API GVRInputRawCleanup() {
 		OutputDebugString("GVRInputRawCleanup()");
 	}
 

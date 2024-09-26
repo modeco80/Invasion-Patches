@@ -3,6 +3,10 @@ build:
 	make -C gvrinput -j $(nproc)
 	make -C launcher -j $(nproc)
 
+compdb:
+	cd gvrinput; bear -- make; cd ..;
+	cd launcher; bear -- make; cd ..;
+
 clean:
 	make -C gvrinput clean
 	make -C launcher clean
