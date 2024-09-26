@@ -89,19 +89,8 @@ PatchResult InvPatch_Patch(const PatchOptions& opts) {
 	// Handle patch stages.
 	// We could probably even move these into another source file if they get too big
 
-	//if(!InvPatch_PatchCrashes(hPatchedExe))
-	//	return PatchResult::PatchFailedGeneric;
-
-	{
-		// test patch; break socket() call so network will be degraded
-		// (probably doesn't work anyways)
-		auto socketArg1Off = LoadAddress2Offset(0x4cf3b3);
-		auto socketArg2Off = LoadAddress2Offset(0x4cf3b5);
-		auto socketArg3Off = LoadAddress2Offset(0x4cf3b9);
-		PokeBytes(hPatchedExe, socketArg1Off, (unsigned char)0xff);
-		PokeBytes(hPatchedExe, socketArg2Off, (unsigned char)0xff);
-		PokeBytes(hPatchedExe, socketArg3Off, (unsigned char)0xff);
-	}
+	if(!InvPatch_PatchCrashes(hPatchedExe))
+		return PatchResult::PatchFailedGeneric;
 
 	if(!InvPatch_PatchResolution(hPatchedExe, opts.res))
 		return PatchResult::PatchFailedGeneric;
