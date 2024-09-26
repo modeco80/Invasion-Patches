@@ -8,7 +8,7 @@
 #include "util.hpp"
 
 // this matches layout of the official GVRInputRaw.dll
-// but we can use any layout that fits in given bytes.
+// but we can store anything after +0x14
 struct gvrInputStructure {
 	char pad[0x14];
 

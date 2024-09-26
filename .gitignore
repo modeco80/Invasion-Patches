@@ -1,3 +1,10 @@
-# binary products
+**/compile_commands.json
+**/.cache
 *.o
+*.res
+*.exe
 *.dll
+
+# packaging
+/pkg
+/InvasionPC.7z

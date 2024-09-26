@@ -8,7 +8,7 @@ CXXFLAGS := $(SDK_INCLUDES) -std=c++23 -O2
 
 # libs 2 link
 LINK_LIBS := ~/vs2022/winsdk/lib/kernel32.lib \
-	lib/msvcrt.lib
+	../common/lib/msvcrt.lib
 
 # objs
 OBJS := dllcrt0.o \
