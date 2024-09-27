@@ -11,12 +11,11 @@ LINK_LIBS := ~/vs2022/winsdk/lib/kernel32.lib \
 
 OUT := invlaunch.exe
 
-VPATH := src/ src/ui ../common/src
+VPATH := src/ src/ui ../common/src ../common/src/base
 
 # objs
-OBJS := crt0.o \
-	ctors.o \
-	exit.o \
+OBJS := \
+	$(SDK_OBJECTS_EXE) \
 	launcher.res \
 	dialog.o \
 	patcher.o \

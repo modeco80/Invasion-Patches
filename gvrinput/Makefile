@@ -6,12 +6,12 @@ include ../common/rules.mk
 LINK_LIBS := ~/vs2022/winsdk/lib/kernel32.lib \
 	../common/lib/msvcrt.lib
 
-VPATH := src/ ../common/src
+VPATH := src/ ../common/src ../common/src/base
 
 OUT := GVRInputRaw.dll
 
 # objs
-OBJS := dllcrt0.o ctors.o exit.o \
+OBJS := $(SDK_OBJECTS_DLL) \
 	gvrinput.o
 
 .PHONY: all clean
