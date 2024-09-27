@@ -1,5 +1,6 @@
 // clang-format off
 // (it will try to reorder these headers in a way which doesn't work)
+#include "ui/dialog.hpp"
 #define _WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commctrl.h>
@@ -17,11 +18,6 @@ consteval auto ArraySize(T (&array)[N]) -> decltype(sizeof(int)) {
 }
 
 HINSTANCE gHInstance;
-HWND hWnd;
-
-void InitDialog();
-
-void Launch();
 
 // for the dropdown and such.
 struct ResolutionEntry {
@@ -49,117 +45,108 @@ constinit static ResolutionEntry RESOLUTION_ENTRIES[] = {
 	{ 3840, 2160 }
 };
 
-BOOL OnCommand(UINT controlId, UINT command) {
-	switch(controlId) {
-		case IDC_MAIN_FULLSCREEN: {
-			if(IsDlgButtonChecked(hWnd, controlId) == TRUE) {
-				CheckDlgButton(hWnd, controlId, BST_CHECKED);
-			} else {
-				CheckDlgButton(hWnd, controlId, BST_UNCHECKED);
-			}
-		} break;
+struct LauncherApp : ui::Dialog {
+	LauncherApp() : ui::Dialog(MAKEINTRESOURCE(IDI_MAIN)) {}
 
-		case IDC_MAIN_LAUNCH: Launch(); break;
+	void Initialize() override {
+		auto hWnd = Window();
 
-		case IDC_MAIN_EXIT:
-			SendMessage(hWnd, WM_CLOSE, 0, 0);
-			return TRUE;
-			break;
+		char resEntryStringTemp[32] {};
 
-		default: break;
+		auto comboBox = GetDlgItem(hWnd, IDC_MAIN_RESOLUTION);
+
+		// Create resolution options on the combo box from our table of resolutions
+		for(auto i = 0; i < ArraySize(RESOLUTION_ENTRIES); ++i) {
+			auto& ri = RESOLUTION_ENTRIES[i];
+			sprintf(&resEntryStringTemp[0], "%ux%u", ri.dwWidth, ri.dwHeight);
+			SendMessage(comboBox, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)resEntryStringTemp);
+		}
+
+		SendMessage(comboBox, CB_SETCURSEL, 0, (LPARAM)0);
 	}
 
-	return FALSE;
-}
+	bool OnCommand(UINT uiControl, HWND hWndControl, UINT uiCommand) override {
+		auto hWnd = Window();
 
-INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
-	switch(uiMsg) {
-		case WM_CLOSE:
-			EndDialog(hWnd, 0);
-			DestroyWindow(hWnd);
-			return TRUE;
-			break;
+		switch(uiControl) {
+			case IDC_MAIN_FULLSCREEN: {
+				if(IsDlgButtonChecked(hWnd, uiControl) == TRUE) {
+					CheckDlgButton(hWnd, uiControl, BST_CHECKED);
+				} else {
+					CheckDlgButton(hWnd, uiControl, BST_UNCHECKED);
+				}
+			} break;
 
-		case WM_COMMAND: {
-			// Handle IDCANCEL. This allows the launcher to be exited with
-			// the Esc key, as well as the "Exit" button handled in OnCommand().
-			if(LOWORD(wParam) == IDCANCEL) {
-				SendMessage(hWnd, WM_CLOSE, 0, 0);
-				return TRUE;
-			}
+			case IDC_MAIN_LAUNCH:
+				Launch();
+				return true;
+				break;
 
-			return OnCommand(LOWORD(wParam), HIWORD(wParam));
-		} break;
+			case IDC_MAIN_EXIT:
+				Close();
+				return true;
+				break;
 
-		case WM_DESTROY: PostQuitMessage(0); break;
+			default: break;
+		}
 
-		default: return FALSE; break;
-	}
-	return FALSE;
-}
-
-void InitDialog() {
-	char resEntryStringTemp[32] {};
-
-	auto comboBox = GetDlgItem(hWnd, IDC_MAIN_RESOLUTION);
-
-	// Create resolution options on the combo box from our table of resolutions
-	for(auto i = 0; i < ArraySize(RESOLUTION_ENTRIES); ++i) {
-		auto& ri = RESOLUTION_ENTRIES[i];
-		sprintf(&resEntryStringTemp[0], "%ux%u", ri.dwWidth, ri.dwHeight);
-		SendMessage(comboBox, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)resEntryStringTemp);
+		return false;
 	}
 
-	SendMessage(comboBox, CB_SETCURSEL, 0, (LPARAM)0);
-}
+	void Launch() {
+		auto hWnd = Window();
 
-void Launch() {
-	auto comboBox = GetDlgItem(hWnd, IDC_MAIN_RESOLUTION);
+		auto comboBox = GetDlgItem(hWnd, IDC_MAIN_RESOLUTION);
 
-	// Get item index. Then use this to index into the res index array
-	int ItemIndex = SendMessage(comboBox, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
-	auto& resEntry = RESOLUTION_ENTRIES[ItemIndex];
+		// Get item index. Then use this to index into the res index array
+		int ItemIndex = SendMessage(comboBox, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+		auto& resEntry = RESOLUTION_ENTRIES[ItemIndex];
 
-	bool fullscreen = false;
+		bool fullscreen = false;
 
-	if(IsDlgButtonChecked(hWnd, IDC_MAIN_FULLSCREEN) == TRUE) {
-		fullscreen = true;
-	}
+		if(IsDlgButtonChecked(hWnd, IDC_MAIN_FULLSCREEN) == TRUE) {
+			fullscreen = true;
+		}
 
-	// Run the patcher.
-	auto res = InvPatch_Patch({ .res = { .fullscreen = fullscreen, .width = resEntry.dwWidth, .height = resEntry.dwHeight } });
+		// Run the patcher.
+		auto res = InvPatch_Patch({ .res = { .fullscreen = fullscreen, .width = resEntry.dwWidth, .height = resEntry.dwHeight } });
 
-	switch(res) {
-		case PatchResult::PatchResultOK: {
-			// Hide ourselves. We will pop back up when the game exits.
-			ShowWindow(hWnd, SW_HIDE);
+		switch(res) {
+			case PatchResult::PatchResultOK: {
+				// Hide ourselves. We will pop back up when the game exits.
+				ShowWindow(hWnd, SW_HIDE);
 
-			STARTUPINFOA si {};
-			PROCESS_INFORMATION pi {};
+				STARTUPINFOA si {};
+				PROCESS_INFORMATION pi {};
 
-			if(CreateProcessA("invasion-tmp.exe", nullptr, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi) == 0) {
+				if(CreateProcessA("invasion-tmp.exe", nullptr, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi) == 0) {
+					ShowWindow(hWnd, SW_SHOW);
+					MessageBox(hWnd, "Failed to launch patched binary.", "Launcher error", MB_OK | MB_ICONHAND);
+					return;
+				}
+
+				// Wait for the game's process to exit.
+				WaitForSingleObject(pi.hProcess, INFINITE);
+
 				ShowWindow(hWnd, SW_SHOW);
-				MessageBox(hWnd, "Failed to launch patched binary.", "Launcher error", MB_OK | MB_ICONHAND);
-				return;
-			}
+			} break;
 
-			// Wait for the game's process to exit.
-			WaitForSingleObject(pi.hProcess, INFINITE);
+			case PatchResult::PatchInvasionMissing:
+				MessageBox(hWnd, "\"Invasion.exe\" is missing. Please check where the launcher is placed.", "Launcher error", MB_OK | MB_ICONHAND);
+				break;
 
-			ShowWindow(hWnd, SW_SHOW);
-		} break;
+			// This is currently dead code
+			case PatchResult::PatchNotInvasion:
+				MessageBox(hWnd, "\"Invasion.exe\" is not Invasion Earth.", "Launcher error", MB_OK | MB_ICONHAND);
+				break;
 
-		case PatchResult::PatchInvasionMissing:
-			MessageBox(hWnd, "\"Invasion.exe\" is missing. Please check where the launcher is placed.", "Launcher error", MB_OK | MB_ICONHAND);
-			break;
-
-		// This is currently dead code
-		case PatchResult::PatchNotInvasion: MessageBox(hWnd, "\"Invasion.exe\" is not Invasion Earth.", "Launcher error", MB_OK | MB_ICONHAND); break;
-
-		// FIXME: specific errors
-		case PatchResult::PatchFailedGeneric: MessageBox(hWnd, "The patcher failed during operation.", "Launcher error", MB_OK | MB_ICONHAND); break;
+			// FIXME: specific errors
+			case PatchResult::PatchFailedGeneric:
+				MessageBox(hWnd, "The patcher failed during operation.", "Launcher error", MB_OK | MB_ICONHAND);
+				break;
+		}
 	}
-}
+};
 
 extern "C" int lily_main(HINSTANCE hInstance) {
 	gHInstance = hInstance;
@@ -168,28 +155,7 @@ extern "C" int lily_main(HINSTANCE hInstance) {
 	INITCOMMONCONTROLSEX ctrls { .dwSize = sizeof(ctrls), .dwICC = ICC_WIN95_CLASSES };
 	InitCommonControlsEx(&ctrls);
 
-	// show my beautiful handiwork
-	hWnd = CreateDialog(hInstance, MAKEINTRESOURCE(IDI_MAIN), nullptr, MainDlgProc);
-	// TODO: Center the window or something why the hell does createdialog put it at 0,0 by default
-
-	ShowWindow(hWnd, SW_SHOW);
-
-	InitDialog();
-
-	// win32 pump and dump
-	BOOL ret {};
-	MSG msg {};
-
-	while((ret = GetMessage(&msg, nullptr, 0, 0)) != 0) {
-		if(ret == -1) {
-			// something went explosion so break out of the loop and just exit
-			// (peak error handling strategy)
-			break;
-		} else if(!IsWindow(hWnd) || !IsDialogMessage(hWnd, &msg)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
-
+	LauncherApp dialog;
+	dialog.ShowModeless(gHInstance);
 	return 0;
 }
