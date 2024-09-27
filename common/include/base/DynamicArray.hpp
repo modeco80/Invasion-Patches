@@ -126,6 +126,14 @@ namespace base {
             rawArray[size-1] = elem;
         }
 
+		void Clear() {
+			Resize(0);
+		}
+
+		void ShrinkToFit() {
+			Reserve(size);
+		}
+
         [[nodiscard]] constexpr SizeType Capacity() const {
             return capacity;
         }

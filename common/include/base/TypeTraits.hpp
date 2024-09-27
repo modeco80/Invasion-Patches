@@ -81,6 +81,8 @@ namespace base {
 	using detail::IntegralConstant;
 	using detail::TrueType;
 
+	using detail::Conditional;
+
 	using detail::RemoveConst;
 	using detail::RemoveCV;
 	using detail::RemoveCVReference;
